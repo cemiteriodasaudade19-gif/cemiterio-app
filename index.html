@@ -246,8 +246,8 @@ tbody td{padding:8px 13px;white-space:nowrap;max-width:200px;overflow:hidden;tex
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 // ── CONFIG ────────────────────────────────────────────
-const SHEET_ID = '2PACX-1vRMHD_UoG2JdwcAv25sJ-KGOGNKUDC9cPIsv4fiS6R9BFYrrT47-XKetU0TQ0Tr2g';
-const SHEET_CSV = `https://api.allorigins.win/raw?url=https://docs.google.com/spreadsheets/d/e/${SHEET_ID}/pub?output=csv`;
+// Google Sheets published as CSV - direct URL (works from GitHub Pages)
+const SHEET_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRMHD_UoG2JdwcAv25sJ-KGOGNKUDC9cPIsv4fiS6R9BFYrrT47-XKetU0TQ0Tr2g/pub?output=csv&gid=0&single=true&cachebust=' + Date.now();
 
 // ── STATE ─────────────────────────────────────────────
 let allData=[], filtered=[], alertaData=[];
@@ -293,27 +293,38 @@ function hasExum(r){return r.EXU_DATEXU&&String(r.EXU_DATEXU).trim()!==''&&Strin
 function normQ(q){if(!q||String(q).trim()==='')return '';return String(q).trim().toUpperCase().replace(/^Q[-\s]?/,'');}
 
 // ── LOAD DATA ─────────────────────────────────────────
-function init(){
+async function init(){
   document.getElementById('navTotal').textContent='Carregando dados…';
-  Papa.parse(SHEET_CSV, {
-    download: true,
-    header: true,
-    skipEmptyLines: true,
-    complete: function(results){
-      allData = results.data.filter(r => r.NOME && String(r.NOME).trim() !== '' && String(r.NOME).trim() !== 'null');
-      document.getElementById('navTotal').textContent = allData.length.toLocaleString('pt-BR') + ' registros';
-      popularFiltros();
-      calcularAlertas();
-      filtrar(1);
-      buildMapaCache();
-      setTimeout(()=>renderDash(),100);
-      toast('✅ '+allData.length.toLocaleString('pt-BR')+' registros carregados!');
-    },
-    error: function(err){
-      document.getElementById('navTotal').textContent='Erro ao carregar';
-      toast('Erro ao carregar dados: '+err.message,'err');
-    }
-  });
+  
+  // Google Sheets published CSV supports CORS natively
+  const url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRMHD_UoG2JdwcAv25sJ-KGOGNKUDC9cPIsv4fiS6R9BFYrrT47-XKetU0TQ0Tr2g/pub?output=csv&single=true';
+  
+  try {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const csvText = await r.text();
+    
+    if (!csvText || csvText.length < 100) throw new Error('Dados vazios');
+    
+    Papa.parse(csvText, {
+      header: true,
+      skipEmptyLines: true,
+      complete: function(results) {
+        allData = results.data.filter(r => r.NOME && String(r.NOME).trim() !== '' && String(r.NOME).trim() !== 'null');
+        document.getElementById('navTotal').textContent = allData.length.toLocaleString('pt-BR') + ' registros';
+        popularFiltros();
+        calcularAlertas();
+        filtrar(1);
+        buildMapaCache();
+        setTimeout(()=>renderDash(),100);
+        toast('✅ '+allData.length.toLocaleString('pt-BR')+' registros carregados!');
+      }
+    });
+  } catch(e) {
+    console.error('Erro:', e);
+    document.getElementById('navTotal').textContent='Erro ao carregar';
+    toast('Erro ao carregar dados: ' + e.message,'err');
+  }
 }
 
 // ── ALERTAS ───────────────────────────────────────────
