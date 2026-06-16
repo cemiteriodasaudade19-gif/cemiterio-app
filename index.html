@@ -246,7 +246,8 @@ tbody td{padding:8px 13px;white-space:nowrap;max-width:200px;overflow:hidden;tex
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 // ── CONFIG ────────────────────────────────────────────
-const SHEET_CSV = 'https://corsproxy.io/?https://docs.google.com/spreadsheets/d/e/2PACX-1vRMHD_UoG2JdwcAv25sJ-KGOGNKUDC9cPIsv4fiS6R9BFYrrT47-XKetU0TQ0Tr2g/pub?output=csv';
+const SHEET_ID = '2PACX-1vRMHD_UoG2JdwcAv25sJ-KGOGNKUDC9cPIsv4fiS6R9BFYrrT47-XKetU0TQ0Tr2g';
+const SHEET_CSV = `https://api.allorigins.win/raw?url=https://docs.google.com/spreadsheets/d/e/${SHEET_ID}/pub?output=csv`;
 
 // ── STATE ─────────────────────────────────────────────
 let allData=[], filtered=[], alertaData=[];
