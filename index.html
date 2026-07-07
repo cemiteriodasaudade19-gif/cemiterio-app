@@ -27,7 +27,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .spinner{width:40px;height:40px;border:3px solid var(--gl);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 /* METRICS */
-.mrow{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:18px;}
+.mrow{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;}
 .mc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:13px 15px;}
 .mc.g{border-left:3px solid var(--green);}
 .mc.a{border-left:3px solid var(--amber);}
@@ -75,6 +75,7 @@ tbody td{padding:8px 13px;white-space:nowrap;max-width:200px;overflow:hidden;tex
 .bno{background:var(--s2);color:var(--t3);}
 .bvenc{background:var(--rl);color:var(--red);}
 .bprox{background:var(--al);color:var(--amber);}
+.bremarc{background:var(--bl);color:var(--blue);}
 /* MAP */
 .mapcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px;overflow-x:auto;}
 .mgrid{display:flex;flex-wrap:wrap;gap:10px;}
@@ -123,6 +124,7 @@ tbody td{padding:8px 13px;white-space:nowrap;max-width:200px;overflow:hidden;tex
 </head>
 <body>
 <div id="tooltip"></div>
+<input type="date" id="datePickerHidden" style="position:fixed;opacity:0;pointer-events:none;top:-9999px;left:-9999px;">
 <div class="toast" id="toast"></div>
 
 <nav class="nav">
@@ -302,6 +304,7 @@ function parseD(v){if(!v)return null;const s=String(v).trim().split(' ')[0];cons
 function getYear(v){const d=parseD(v);return d?d.getFullYear():null;}
 function getMonth(v){const d=parseD(v);return d?d.getMonth()+1:null;}
 function hasExum(r){return r.EXU_DATEXU&&String(r.EXU_DATEXU).trim()!==''&&String(r.EXU_DATEXU).trim()!=='null';}
+function hasRemarcado(r){return r.EXU_REMARCADO&&String(r.EXU_REMARCADO).trim().toUpperCase()==='SIM';}
 function normQ(q){if(!q||String(q).trim()==='')return '';return String(q).trim().toUpperCase().replace(/^Q[-\s]?/,'');}
 
 // ── LOAD DATA ─────────────────────────────────────────
@@ -331,7 +334,7 @@ async function init(){
 function calcularAlertas(){
   const hoje=new Date();hoje.setHours(0,0,0,0);
   alertaData=allData.filter(r=>{
-    if(hasExum(r))return false;
+    if(hasExum(r)||hasRemarcado(r))return false;
     const p=parseD(r.SEP_DTPREVEXUM);
     return p&&p<hoje;
   }).sort((a,b)=>(parseD(a.SEP_DTPREVEXUM)||0)-(parseD(b.SEP_DTPREVEXUM)||0));
@@ -351,15 +354,15 @@ function renderAlertas(){
   else{
     const lim=new Date(hoje.getTime()+dias*864e5);
     lista=allData.filter(r=>{
-      if(hasExum(r))return false;
+      if(hasExum(r)||hasRemarcado(r))return false;
       const p=parseD(r.SEP_DTPREVEXUM);
       return p&&p>=hoje&&p<=lim;
     }).sort((a,b)=>(parseD(a.SEP_DTPREVEXUM)||0)-(parseD(b.SEP_DTPREVEXUM)||0));
   }
   const p7=new Date(hoje.getTime()+7*864e5),p30=new Date(hoje.getTime()+30*864e5);
   const venc=alertaData.length;
-  const s7=allData.filter(r=>!hasExum(r)&&parseD(r.SEP_DTPREVEXUM)&&parseD(r.SEP_DTPREVEXUM)>=hoje&&parseD(r.SEP_DTPREVEXUM)<=p7).length;
-  const s30=allData.filter(r=>!hasExum(r)&&parseD(r.SEP_DTPREVEXUM)&&parseD(r.SEP_DTPREVEXUM)>p7&&parseD(r.SEP_DTPREVEXUM)<=p30).length;
+  const s7=allData.filter(r=>!hasExum(r)&&!hasRemarcado(r)&&parseD(r.SEP_DTPREVEXUM)&&parseD(r.SEP_DTPREVEXUM)>=hoje&&parseD(r.SEP_DTPREVEXUM)<=p7).length;
+  const s30=allData.filter(r=>!hasExum(r)&&!hasRemarcado(r)&&parseD(r.SEP_DTPREVEXUM)&&parseD(r.SEP_DTPREVEXUM)>p7&&parseD(r.SEP_DTPREVEXUM)<=p30).length;
   document.getElementById('alertStats').innerHTML=`
     <div class="mc r"><div class="lbl">Vencidos</div><div class="val">${venc.toLocaleString('pt-BR')}</div><div class="sub">previsão ultrapassada</div></div>
     <div class="mc o"><div class="lbl">Próx. 7 dias</div><div class="val">${s7.toLocaleString('pt-BR')}</div><div class="sub">urgente</div></div>
@@ -400,15 +403,17 @@ function renderDash(){
   const masc=allData.filter(r=>r.SEXOFALE==='M').length,fem=allData.filter(r=>r.SEXOFALE==='F').length;
   const hoje=new Date();hoje.setHours(0,0,0,0);
   const venc=alertaData.length;
+  const remarc=allData.filter(hasRemarcado).length;
   const p30=new Date(hoje.getTime()+30*864e5);
-  const prox=allData.filter(r=>!hasExum(r)&&parseD(r.SEP_DTPREVEXUM)&&parseD(r.SEP_DTPREVEXUM)>=hoje&&parseD(r.SEP_DTPREVEXUM)<=p30).length;
+  const prox=allData.filter(r=>!hasExum(r)&&!hasRemarcado(r)&&parseD(r.SEP_DTPREVEXUM)&&parseD(r.SEP_DTPREVEXUM)>=hoje&&parseD(r.SEP_DTPREVEXUM)<=p30).length;
   document.getElementById('metricsRow').innerHTML=`
     <div class="mc g"><div class="lbl">Total</div><div class="val">${total.toLocaleString('pt-BR')}</div><div class="sub">registros</div></div>
     <div class="mc"><div class="lbl">Masculino</div><div class="val">${masc.toLocaleString('pt-BR')}</div><div class="sub">${((masc/total)*100).toFixed(1)}%</div></div>
     <div class="mc"><div class="lbl">Feminino</div><div class="val">${fem.toLocaleString('pt-BR')}</div><div class="sub">${((fem/total)*100).toFixed(1)}%</div></div>
     <div class="mc a"><div class="lbl">Exumados</div><div class="val">${exum.toLocaleString('pt-BR')}</div><div class="sub">${((exum/total)*100).toFixed(1)}%</div></div>
     <div class="mc r" onclick="navToAlerts()"><div class="lbl">⚠️ Vencidos</div><div class="val">${venc.toLocaleString('pt-BR')}</div><div class="sub">clique para ver</div></div>
-    <div class="mc o" onclick="navToAlerts()"><div class="lbl">📅 Próx. 30 dias</div><div class="val">${prox.toLocaleString('pt-BR')}</div><div class="sub">previsões</div></div>`;
+    <div class="mc o" onclick="navToAlerts()"><div class="lbl">📅 Próx. 30 dias</div><div class="val">${prox.toLocaleString('pt-BR')}</div><div class="sub">previsões</div></div>
+    <div class="mc" style="border-left:3px solid var(--blue)"><div class="lbl">🔁 Remarcados</div><div class="val">${remarc.toLocaleString('pt-BR')}</div><div class="sub">nova data agendada</div></div>`;
   // Charts
   const ym={};
   allData.forEach(r=>{const y=getYear(r.DTFALECI);if(y&&y>=1999&&y<=2024)ym[y]=(ym[y]||0)+1;});
@@ -579,11 +584,12 @@ function renderTabela(){
     const prev=parseD(r.SEP_DTPREVEXUM);
     let ex='<span class="badge bno">–</span>';
     if(hasExum(r))ex='<span class="badge bex">Exumado</span>';
+    else if(hasRemarcado(r))ex=`<span class="badge bremarc">Remarcado${r.EXU_NOVADATA?': '+fmtD(r.EXU_NOVADATA):''}</span>`;
     else if(prev&&prev<hoje)ex='<span class="badge bvenc">Vencido</span>';
     else if(prev&&prev<=p30)ex='<span class="badge bprox">Próximo</span>';
     const jaz=(r.SEP_TIPOJAZ||'').replace(/^\d+-/,'').substring(0,18)||'–';
     const nome=r.NOME||'<em style="color:var(--t3)">sem nome</em>';
-    let cls='';if(!hasExum(r)&&prev&&prev<hoje)cls='row-alert';else if(!hasExum(r)&&prev&&prev<=p30)cls='row-warn';
+    let cls='';if(!hasExum(r)&&!hasRemarcado(r)&&prev&&prev<hoje)cls='row-alert';else if(!hasExum(r)&&!hasRemarcado(r)&&prev&&prev<=p30)cls='row-warn';
     return `<tr class="${cls}" onclick="verDetalhe(${allData.indexOf(r)})">
       <td>${r.NUMCTFAL||'–'}</td><td title="${r.NOME||''}">${nome}</td><td>${sb}</td>
       <td>${fmtD(r.DTFALECI)||'–'}</td><td>${r.SEP_QUADRA||'–'}</td><td>${r.SEP_BLOCLOTE||'–'}</td>
@@ -602,8 +608,9 @@ function verDetalhe(idx){
   const fd=v=>{const d=fmtD(v);return d?`<span class="fv">${d}</span>`:'<span class="fv empty">–</span>';};
   const hoje=new Date();hoje.setHours(0,0,0,0);
   const prev=parseD(r.SEP_DTPREVEXUM);
-  const alertaExum=!hasExum(r)&&prev&&prev<hoje;
+  const alertaExum=!hasExum(r)&&!hasRemarcado(r)&&prev&&prev<hoje;
   const alertaBanner=alertaExum?`<div style="background:var(--rl);border:1px solid #e8a0a0;border-radius:var(--rs);padding:10px 14px;margin-bottom:14px;font-size:12.5px;color:var(--red);font-weight:500;">⚠️ Exumação vencida há ${Math.floor((hoje-prev)/864e5)} dias (prevista ${fmtD(r.SEP_DTPREVEXUM)})</div>`:'';
+  const remarcBanner=hasRemarcado(r)?`<div style="background:var(--bl);border:1px solid #a8c4e8;border-radius:var(--rs);padding:10px 14px;margin-bottom:14px;font-size:12.5px;color:var(--blue);font-weight:500;">🔁 Exumação remarcada${r.EXU_NOVADATA?' para '+fmtD(r.EXU_NOVADATA):' — nova data ainda não definida'}</div>`:'';
   document.getElementById('modDetail').innerHTML=`
     <div class="mhdr">
       <h2>${r.NOME||'Sem nome'} <small style="font-weight:400;color:var(--t2);font-size:11px">#${r.NUMCTFAL||'–'}</small></h2>
@@ -613,7 +620,7 @@ function verDetalhe(idx){
       </div>
     </div>
     <div class="mbody">
-      ${alertaBanner}
+      ${alertaBanner}${remarcBanner}
       <div class="slbl">Dados pessoais</div>
       <div class="fgrid">
         ${vf('Sexo',fv(r.SEXOFALE))}${vf('Nascimento',fd(r.DTNASC))}
@@ -714,11 +721,51 @@ function exportRelOutput(){
 }
 
 
+// ── MÁSCARA DE DATA + CALENDÁRIO (texto DD/MM/AAAA, sem inputs nativos visíveis) ──
+function maskDate(el){
+  let v = el.value.replace(/\D/g,'').slice(0,8);
+  let out = v;
+  if(v.length>=5) out = v.slice(0,2)+'/'+v.slice(2,4)+'/'+v.slice(4,8);
+  else if(v.length>=3) out = v.slice(0,2)+'/'+v.slice(2,4);
+  el.value = out;
+}
+function abrirCalendario(id){
+  const picker = document.getElementById('datePickerHidden');
+  picker.dataset.target = id;
+  const atual = document.getElementById(id).value.trim();
+  const p = atual.split('/');
+  if(p.length===3 && p[2].length>=2){
+    const yyyy = p[2].length===2 ? '20'+p[2] : p[2];
+    const mm = p[1].padStart(2,'0'), dd = p[0].padStart(2,'0');
+    picker.value = `${yyyy}-${mm}-${dd}`;
+  } else {
+    picker.value = '';
+  }
+  if (picker.showPicker) picker.showPicker(); else picker.click();
+}
+document.getElementById('datePickerHidden').addEventListener('change', function(){
+  const targetId = this.dataset.target;
+  if(!targetId) return;
+  const target = document.getElementById(targetId);
+  if(!target) return;
+  const [y,m,d] = this.value.split('-');
+  if(y&&m&&d) target.value = `${d}/${m}/${y}`;
+});
+function dateField(id, label, value, obrigatorio){
+  const req = obrigatorio ? ' *' : '';
+  return `<div class="fg"><label>${label}${req}</label>
+    <div style="display:flex;gap:4px;">
+      <input type="text" id="${id}" value="${value}" placeholder="DD/MM/AAAA" maxlength="10" inputmode="numeric" oninput="maskDate(this)" style="flex:1">
+      <button type="button" class="btn" style="padding:6px 9px;flex-shrink:0" onclick="abrirCalendario('${id}')" title="Escolher no calendário">📅</button>
+    </div>
+  </div>`;
+}
+
 // ── EDIÇÃO / NOVO / EXCLUIR (grava no Google Sheets via Apps Script) ──
 let editIdx = -1; // índice em allData; -1 = novo
 
 const TIPOS_JAZ=['','1-Terreno Particular','2-Terreno PMTS','3-Columbário Adulto','4-Columbário Infantil','5-Gavetão','6-Nicho de Ossuário','7-Ossário Geral','8-Outro Cemitério','9-Sem Informação'];
-const CAMPOS_FORM=['NOME','NUMCTFAL','SEXOFALE','DTNASC','DTFALECI','MAE','PAI','DOCOBITO','OPERADOR','DTCADASTRO','LIVRONUM','LIVROPAG','LIVROORD','NUMPROCANO','SEP_DATA','SEP_TIPOJAZ','SEP_QUADRA','SEP_BLOCLOTE','SEP_NICOLGAV','SEP_LACRE','SEP_DTPREVEXUM','EXU_DATEXU','EXU_TIPOJAZ','EXU_QUADRA','EXU_BLOCLOTE','EXU_NICOLGAV','EXU_LACRE','EXU_DATREINUMA','EXU_CEMISN','HISTORICO','OUTRASINF','OBSERVGERAL'];
+const CAMPOS_FORM=['NOME','SEP_DATA','SEP_TIPOJAZ','SEP_QUADRA','SEP_BLOCLOTE','SEP_NICOLGAV','EXU_DATEXU','EXU_TIPOJAZ','EXU_QUADRA','EXU_BLOCLOTE','EXU_NICOLGAV','EXU_LACRE'];
 
 function optsTipo(val){return TIPOS_JAZ.map(t=>`<option value="${t}"${val===t?' selected':''}>${t.replace(/^\d+-/,'')||'– selecione –'}</option>`).join('');}
 
@@ -728,56 +775,47 @@ function abrirEdicao(idx){editIdx=idx;document.getElementById('ovDetail').classL
 function renderForm(r){
   const v=k=>(r[k]!==undefined&&r[k]!==null&&String(r[k]).trim()!==''&&String(r[k])!=='null')?String(r[k]):'';
   const isNovo=editIdx<0;
-  const inp=(k,l,ph='')=>`<div class="fg"><label>${l}</label><input id="ef_${k}" value="${v(k).replace(/"/g,'&quot;')}" placeholder="${ph}"></div>`;
+  const remarcadoAtual = String(v('EXU_REMARCADO')).toUpperCase()==='SIM';
+  const inpSimples=(k,l)=>`<div class="fg"><label>${l}</label><input id="ef_${k}" value="${v(k).replace(/"/g,'&quot;')}"></div>`;
+
   document.getElementById('modEdit').innerHTML=`
     <div class="mhdr"><h2>${isNovo?'➕ Novo falecido':'✏️ Editar — '+(r.NOME||'')}</h2><button class="mclose" onclick="fecharOv('ovEdit')">×</button></div>
     <div class="mbody">
-      <div class="slbl">Dados pessoais</div>
+      <div class="slbl">Dados do falecido</div>
       <div class="fgrid">
         <div class="fg" style="grid-column:1/-1"><label>Nome completo *</label><input id="ef_NOME" value="${v('NOME').replace(/"/g,'&quot;')}"></div>
-        <div class="fg"><label>Sexo</label><select id="ef_SEXOFALE"><option value="">–</option><option value="M"${v('SEXOFALE')==='M'?' selected':''}>Masculino</option><option value="F"${v('SEXOFALE')==='F'?' selected':''}>Feminino</option></select></div>
-        ${inp('NUMCTFAL','Nº registro')}
-        ${inp('DTNASC','Nascimento','MM/DD/AA')}
-        ${inp('DTFALECI','Falecimento','MM/DD/AA')}
-        ${inp('MAE','Mãe')}
-        ${inp('PAI','Pai')}
-        ${inp('DOCOBITO','Doc. óbito')}
-        ${inp('OPERADOR','Operador')}
       </div>
-      <div class="slbl">Registro em livro</div>
-      <div class="fgrid">
-        ${inp('LIVRONUM','Livro')}
-        ${inp('LIVROPAG','Página')}
-        ${inp('LIVROORD','Ordem')}
-        ${inp('NUMPROCANO','Proc/Ano')}
-        ${inp('DTCADASTRO','Data cadastro','MM/DD/AA')}
-      </div>
+
       <div class="slbl">Sepultamento</div>
       <div class="fgrid">
-        ${inp('SEP_DATA','Data sepultamento','MM/DD/AA')}
+        ${dateField('ef_SEP_DATA','Data do sepultamento', v('SEP_DATA'))}
         <div class="fg"><label>Tipo de jazigo</label><select id="ef_SEP_TIPOJAZ">${optsTipo(v('SEP_TIPOJAZ'))}</select></div>
-        ${inp('SEP_QUADRA','Quadra')}
-        ${inp('SEP_BLOCLOTE','Bloco/Lote')}
-        ${inp('SEP_NICOLGAV','Nicho/Gaveta')}
-        ${inp('SEP_LACRE','Lacre')}
-        ${inp('SEP_DTPREVEXUM','Previsão de exumação','MM/DD/AA')}
+        ${inpSimples('SEP_QUADRA','Quadra')}
+        ${inpSimples('SEP_BLOCLOTE','Bloco/Lote')}
+        ${inpSimples('SEP_NICOLGAV','Gaveta')}
       </div>
-      <div class="slbl">✅ Dar baixa — Exumação (AK / AP / AQ)</div>
+
+      <div class="slbl">Exumação</div>
       <div class="fgrid">
-        ${inp('EXU_DATEXU','Data da exumação','MM/DD/AA')}
-        <div class="fg"><label>Tipo jazigo destino (AK)</label><select id="ef_EXU_TIPOJAZ">${optsTipo(v('EXU_TIPOJAZ'))}</select></div>
-        ${inp('EXU_QUADRA','Quadra destino')}
-        ${inp('EXU_BLOCLOTE','Lote destino')}
-        ${inp('EXU_NICOLGAV','Destino ossário/gaveta (AP)')}
-        ${inp('EXU_LACRE','Nº lacre exumação (AQ)')}
-        ${inp('EXU_DATREINUMA','Data reinumação')}
-        ${inp('EXU_CEMISN','ISN?')}
+        ${dateField('ef_EXU_DATEXU','Data da exumação', v('EXU_DATEXU'))}
+        <div class="fg"><label>Tipo jazigo destino</label><select id="ef_EXU_TIPOJAZ">${optsTipo(v('EXU_TIPOJAZ'))}</select></div>
+        ${inpSimples('EXU_QUADRA','Quadra destino')}
+        ${inpSimples('EXU_BLOCLOTE','Lote destino')}
+        ${inpSimples('EXU_NICOLGAV','Gaveta/Ossário destino')}
+        ${inpSimples('EXU_LACRE','Lacre')}
       </div>
-      <div class="slbl">Histórico e observações</div>
+
+      <div class="slbl">Remarcação de exumação</div>
       <div class="fgrid">
-        <div class="fg" style="grid-column:1/-1"><label>Histórico (BC)</label><textarea id="ef_HISTORICO" rows="2">${v('HISTORICO')}</textarea></div>
-        <div class="fg" style="grid-column:1/-1"><label>Outras informações</label><textarea id="ef_OUTRASINF" rows="2">${v('OUTRASINF')}</textarea></div>
-        <div class="fg" style="grid-column:1/-1"><label>Observações gerais</label><textarea id="ef_OBSERVGERAL" rows="2">${v('OBSERVGERAL')}</textarea></div>
+        <div class="fg" style="grid-column:1/-1">
+          <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:13px;font-weight:500;color:var(--text);cursor:pointer;">
+            <input type="checkbox" id="ef_EXU_REMARCADO_CHK" ${remarcadoAtual?'checked':''} onchange="toggleRemarcacao()" style="width:16px;height:16px;">
+            A exumação não foi realizada na data prevista — remarcar para outra data
+          </label>
+        </div>
+        <div class="fg" id="wrapNovaData" style="grid-column:1/-1;${remarcadoAtual?'':'display:none'}">
+          ${dateField('ef_EXU_NOVADATA','Nova data prevista para a exumação', v('EXU_NOVADATA'))}
+        </div>
       </div>
     </div>
     <div class="mfooter">
@@ -785,6 +823,11 @@ function renderForm(r){
       <button class="btn g" id="btnSalvarForm" onclick="salvarEdicao()">💾 Salvar na planilha</button>
     </div>`;
   document.getElementById('ovEdit').classList.add('open');
+}
+
+function toggleRemarcacao(){
+  const chk = document.getElementById('ef_EXU_REMARCADO_CHK');
+  document.getElementById('wrapNovaData').style.display = chk.checked ? '' : 'none';
 }
 
 async function apiPost(payload){
@@ -803,6 +846,15 @@ async function salvarEdicao(){
   btn.disabled=true;btn.textContent='⏳ Salvando…';
   const registro={};
   CAMPOS_FORM.forEach(k=>{const el=document.getElementById('ef_'+k);if(el)registro[k]=el.value.trim();});
+  const remarcadoChk=document.getElementById('ef_EXU_REMARCADO_CHK');
+  if(remarcadoChk && remarcadoChk.checked){
+    registro['EXU_REMARCADO']='SIM';
+    const nd=document.getElementById('ef_EXU_NOVADATA');
+    registro['EXU_NOVADATA']=nd?nd.value.trim():'';
+  } else {
+    registro['EXU_REMARCADO']='';
+    registro['EXU_NOVADATA']='';
+  }
   try{
     if(editIdx<0){
       await apiPost({action:'criar',registro});
