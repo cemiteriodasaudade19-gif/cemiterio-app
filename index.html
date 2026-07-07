@@ -124,7 +124,7 @@ tbody td{padding:8px 13px;white-space:nowrap;max-width:200px;overflow:hidden;tex
 </head>
 <body>
 <div id="tooltip"></div>
-<input type="date" id="datePickerHidden" style="position:fixed;opacity:0;pointer-events:none;top:-9999px;left:-9999px;">
+<input type="date" id="datePickerHidden" style="position:fixed;opacity:0;pointer-events:none;width:1px;height:1px;top:0;left:0;">
 <div class="toast" id="toast"></div>
 
 <nav class="nav">
@@ -729,9 +729,18 @@ function maskDate(el){
   else if(v.length>=3) out = v.slice(0,2)+'/'+v.slice(2,4);
   el.value = out;
 }
-function abrirCalendario(id){
+function abrirCalendario(id, btnEl){
   const picker = document.getElementById('datePickerHidden');
   picker.dataset.target = id;
+
+  // Posiciona o picker exatamente sobre o botão clicado, para o calendário
+  // nativo do navegador abrir visível ao lado do campo (não fora da tela).
+  if (btnEl) {
+    const rect = btnEl.getBoundingClientRect();
+    picker.style.top = rect.bottom + 'px';
+    picker.style.left = rect.left + 'px';
+  }
+
   const atual = document.getElementById(id).value.trim();
   const p = atual.split('/');
   if(p.length===3 && p[2].length>=2){
@@ -741,7 +750,7 @@ function abrirCalendario(id){
   } else {
     picker.value = '';
   }
-  if (picker.showPicker) picker.showPicker(); else picker.click();
+  if (picker.showPicker) { picker.showPicker(); } else { picker.style.pointerEvents='auto'; picker.click(); }
 }
 document.getElementById('datePickerHidden').addEventListener('change', function(){
   const targetId = this.dataset.target;
@@ -756,7 +765,7 @@ function dateField(id, label, value, obrigatorio){
   return `<div class="fg"><label>${label}${req}</label>
     <div style="display:flex;gap:4px;">
       <input type="text" id="${id}" value="${value}" placeholder="DD/MM/AAAA" maxlength="10" inputmode="numeric" oninput="maskDate(this)" style="flex:1">
-      <button type="button" class="btn" style="padding:6px 9px;flex-shrink:0" onclick="abrirCalendario('${id}')" title="Escolher no calendário">📅</button>
+      <button type="button" class="btn" style="padding:6px 9px;flex-shrink:0" onclick="abrirCalendario('${id}', this)" title="Escolher no calendário">📅</button>
     </div>
   </div>`;
 }
@@ -765,7 +774,7 @@ function dateField(id, label, value, obrigatorio){
 let editIdx = -1; // índice em allData; -1 = novo
 
 const TIPOS_JAZ=['','1-Terreno Particular','2-Terreno PMTS','3-Columbário Adulto','4-Columbário Infantil','5-Gavetão','6-Nicho de Ossuário','7-Ossário Geral','8-Outro Cemitério','9-Sem Informação'];
-const CAMPOS_FORM=['NOME','SEP_DATA','SEP_TIPOJAZ','SEP_QUADRA','SEP_BLOCLOTE','SEP_NICOLGAV','EXU_DATEXU','EXU_TIPOJAZ','EXU_QUADRA','EXU_BLOCLOTE','EXU_NICOLGAV','EXU_LACRE'];
+const CAMPOS_FORM=['NOME','SEP_DATA','SEP_TIPOJAZ','SEP_QUADRA','SEP_BLOCLOTE','SEP_NICOLGAV','EXU_DATEXU','EXU_TIPOJAZ','EXU_QUADRA','EXU_BLOCLOTE','EXU_NICOLGAV','EXU_LACRE','HISTORICO'];
 
 function optsTipo(val){return TIPOS_JAZ.map(t=>`<option value="${t}"${val===t?' selected':''}>${t.replace(/^\d+-/,'')||'– selecione –'}</option>`).join('');}
 
@@ -803,6 +812,11 @@ function renderForm(r){
         ${inpSimples('EXU_BLOCLOTE','Lote destino')}
         ${inpSimples('EXU_NICOLGAV','Gaveta/Ossário destino')}
         ${inpSimples('EXU_LACRE','Lacre')}
+      </div>
+
+      <div class="slbl">Histórico</div>
+      <div class="fgrid">
+        <div class="fg" style="grid-column:1/-1"><label>Histórico</label><textarea id="ef_HISTORICO" rows="2">${v('HISTORICO')}</textarea></div>
       </div>
 
       <div class="slbl">Remarcação de exumação</div>
