@@ -299,8 +299,46 @@ function navTo(btn){
 function navToAlerts(){navTo(document.querySelector('[data-pg="alertas"]'));}
 function debounce(){clearTimeout(buscarTimer);buscarTimer=setTimeout(()=>filtrar(1),320);}
 window.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.overlay.open').forEach(o=>o.classList.remove('open'));});
-function fmtD(v){if(!v||String(v).trim()==='')return null;const s=String(v).split(' ')[0];const p=s.split('/');if(p.length===3){const y=p[2].length===2?'20'+p[2]:p[2];return p[1]+'/'+p[0]+'/'+y;}return s;}
-function parseD(v){if(!v)return null;const s=String(v).trim().split(' ')[0];const p=s.split('/');if(p.length===3){const y=p[2].length===2?'20'+p[2]:p[2];return new Date(parseInt(y),parseInt(p[0])-1,parseInt(p[1]));}return null;}
+function fmtD(v){
+  if(!v||String(v).trim()==='')return null;
+  const raw=String(v).trim();
+  const s=raw.split(' ')[0];
+  // Formato MM/DD/AA ou MM/DD/AAAA (vindo da planilha)
+  const p=s.split('/');
+  if(p.length===3 && /^\d+$/.test(p[0]) && /^\d+$/.test(p[1]) && /^\d+$/.test(p[2])){
+    const y=p[2].length===2?'20'+p[2]:p[2];
+    const mm=p[0].padStart(2,'0'), dd=p[1].padStart(2,'0');
+    return dd+'/'+mm+'/'+y;
+  }
+  // Formato ISO AAAA-MM-DD (vindo do <input type="date">)
+  const q=s.split('-');
+  if(q.length===3 && /^\d{4}$/.test(q[0]) && /^\d{1,2}$/.test(q[1]) && /^\d{1,2}$/.test(q[2])){
+    return q[2].padStart(2,'0')+'/'+q[1].padStart(2,'0')+'/'+q[0];
+  }
+  // Qualquer outro formato (ex: data bruta em inglês) — tenta parse via Date nativo
+  const d=new Date(raw);
+  if(!isNaN(d.getTime())){
+    const dd=String(d.getDate()).padStart(2,'0');
+    const mm=String(d.getMonth()+1).padStart(2,'0');
+    const yy=d.getFullYear();
+    return dd+'/'+mm+'/'+yy;
+  }
+  return raw;
+}
+function parseD(v){
+  if(!v)return null;
+  const s=String(v).trim().split(' ')[0];
+  const p=s.split('/');
+  if(p.length===3 && /^\d+$/.test(p[0]) && /^\d+$/.test(p[1]) && /^\d+$/.test(p[2])){
+    const y=p[2].length===2?'20'+p[2]:p[2];
+    return new Date(parseInt(y),parseInt(p[0])-1,parseInt(p[1]));
+  }
+  const q=s.split('-');
+  if(q.length===3 && /^\d{4}$/.test(q[0])){
+    return new Date(parseInt(q[0]),parseInt(q[1])-1,parseInt(q[2]));
+  }
+  return null;
+}
 function getYear(v){const d=parseD(v);return d?d.getFullYear():null;}
 function getMonth(v){const d=parseD(v);return d?d.getMonth()+1:null;}
 function hasExum(r){return r.EXU_DATEXU&&String(r.EXU_DATEXU).trim()!==''&&String(r.EXU_DATEXU).trim()!=='null';}
